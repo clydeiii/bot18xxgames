@@ -2,8 +2,8 @@
 require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
-//const auth = require('./auth.json');
 
+var timeUp = Date();
 
 
 client.on('ready', () => {
@@ -12,7 +12,7 @@ client.on('ready', () => {
 
 client.on('message', msg => {
   if (msg.content === 'ping') {
-    msg.reply('pong via @clydeiii#0966');
+    msg.reply('pong via @clydeiii#0966 (time up:'+timeUp+')');
   }
 });
 
