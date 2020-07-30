@@ -13,7 +13,6 @@
     "discord.js": "^11.6.4",
     "dotenv": "^8.2.0",
     "eslint": "^7.5.0",
-    "fetch": "^1.1.0",
     "node-fetch": "^2.6.0"
   }
 }
