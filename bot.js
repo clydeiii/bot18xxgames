@@ -3,11 +3,16 @@ require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const fetch = require('node-fetch');
+const fs = require('fs');
 const timeUp = Date();
-const createCommand = '!create_game';
+const commandLogFileName = './commands.log';
+const monitorCommand = '!monitor_game';
+const listCommand = '!list_games';
+const forgetCommand = '!forget_game';
+const helpCommand = '!help';
 const gameDatabase = new Discord.Collection();
-const internalPollingInterval = 10;
-const externalPollingInterval = 120;
+const internalPollingInterval = 29;
+const externalPollingInterval = 179;
 const webAPI = 'https://www.18xx.games/api/game/';
 
 class Game {
@@ -17,7 +22,7 @@ class Game {
 		this._currentPlayer = players.first();
 		this._channel = channel;
 		this._guild = guild;
-		this._needsAlert = true;
+		this._needsAlert = false;
 	}
 	set id(val) {
 		this._id = val;
@@ -77,7 +82,7 @@ class Game {
 	}
 
 	toString() {
-		return `game id ${this._id} with players ${this._players} in channel ${this._channel} on server ${this._guild} (current player is ${this._currentPlayer})`;
+		return `game id ${this._id} with players ${this._players} in channel ${this._channel} on server ${this._guild}`;
 	}
 }
 
@@ -88,18 +93,37 @@ class Game {
  ****/
 client.on('message', msg => {
 	// console.log(msg.content);
-	if (msg.content.startsWith(createCommand)) {
-		const args = msg.content.slice(createCommand.length).trim().split(' ');
+	if (msg.content.startsWith(monitorCommand)) {
+		fs.appendFileSync(commandLogFileName, `${msg.channel} ${msg.content}\n`);
+		const args = msg.content.slice(monitorCommand.length).trim().split(' ');
 		const gameID = args[0];
-		gameDatabase.set(gameID, new Game(gameID, msg.mentions.users, msg.channel, msg.guild));
-		msg.reply(`game created: ${gameDatabase.get(gameID).toString()}`);
+		if(!gameDatabase.has(gameID)) {
+			gameDatabase.set(gameID, new Game(gameID, msg.mentions.users, msg.channel, msg.guild));
+			console.log('monitoring game: ' + gameDatabase.get(gameID).toString());
+			msg.reply(`monitoring game: ${gameDatabase.get(gameID).toString()}`);
+		}
+		else {
+			console.log(`player tried to monitor game ${gameID} twice`);
+			msg.reply(`alreadying monitoring game ${gameID}`);
+		}
 	}
-	if (msg.content === '!list_games') {
+	else if(msg.content.startsWith(forgetCommand)) {
+		fs.appendFileSync(commandLogFileName, `${msg.channel} ${msg.content}\n`);
+		const args = msg.content.slice(forgetCommand.length).trim().split(' ');
+		const gameID = args[0];
+		console.log('forgetting game ' + gameID);
+		gameDatabase.delete(gameID);
+		msg.reply(`game ${gameID} forgotten`);
+	}
+	else if (msg.content === listCommand) {
 		for(const gameID of gameDatabase.keys()) {
 			msg.reply(`${gameID} : ${gameDatabase.get(gameID).toString()}`);
 		}
 	}
-	if (msg.content === '!wwjcld') {
+	else if(msg.content === helpCommand) {
+		msg.reply(`commands supported: \n${monitorCommand} [gameID] players\n${forgetCommand} [gameID]\n${listCommand}\n${helpCommand}`);
+	}
+	else if (msg.content === '!wwjcld') {
 		msg.reply('clearclaw would dump B&O on you right now');
 	}
 });
@@ -117,9 +141,14 @@ const getCurrentPlayerFromWeb = async gameID => {
 		console.log(`obtaining active player from ${webAPI}${gameID}`);
 		const response = await fetch(webAPI + gameID);
 		const json = await response.json();
+		const gameStatus = json.status;
+		if(gameStatus === 'finished') {
+			console.log(`game ${gameID} has finished`);
+			gameDatabase.delete(gameID);
+		}
 		json.players.forEach(player => {
 			if(player['id'] === parseInt(json.acting)) {
-				console.log(`active player ${player['name']}`);
+				console.log(`active player in ${gameID} is ${player['name']}`);
 				const game = gameDatabase.get(gameID);
 				game.advancePlayer(player['name']);
 			}
