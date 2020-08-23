@@ -167,7 +167,11 @@ setInterval (function() {
 	for(const gameID of gameDatabase.keys()) {
 		const game = gameDatabase.get(gameID);
 		if (game.needsAlert) {
-			game.channel.send(`${game.currentPlayer} it is your turn in https://www.18xx.games/game/${gameID}`).catch(console.error);
+			let updateMsg = `${game.currentPlayer} it is your turn in https://www.18xx.games/game/${gameID}`;
+			if (process.env.UPDATE_MSG) {
+				updateMsg = updateMsg + `\n${process.env.UPDATE_MSG}`;
+			}
+			game.channel.send(updateMsg).catch(console.error);
 			game.needsAlert = false;
 		}
 	}
