@@ -15,6 +15,11 @@ const internalPollingInterval = 29;
 const externalPollingInterval = 179;
 const webAPI = 'https://www.18xx.games/api/game/';
 
+const playerAliasMap = new Map();
+playerAliasMap.set('DelmarSon.ttv', 'DelmarSon');
+playerAliasMap.set('happypandoo', 'Happypandoo');
+playerAliasMap.set('nannermonkey', 'bellynice');
+
 class Game {
 	constructor(id, players, channel, guild) {
 		this._id = id;
@@ -68,7 +73,8 @@ class Game {
 		// we need to turn website's player name into discord player object here
 		// loop over all assigned discord users into this game and see if any match exists
 		for(const player of this._players) {
-			if(player.username === nextPlayerAccordingToWeb) {
+			if(player.username === nextPlayerAccordingToWeb
+				|| (playerAliasMap.has(player.username) && playerAliasMap.get(player.username) === nextPlayerAccordingToWeb)) {
 				realNextUser = player;
 			}
 		}
