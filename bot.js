@@ -73,8 +73,7 @@ class Game {
 		// we need to turn website's player name into discord player object here
 		// loop over all assigned discord users into this game and see if any match exists
 		for(const player of this._players) {
-			if(player.username === nextPlayerAccordingToWeb
-				|| (playerAliasMap.has(player.username) && playerAliasMap.get(player.username) === nextPlayerAccordingToWeb)) {
+			if (playerEquals(player, nextPlayerAccordingToWeb)) {
 				realNextUser = player;
 			}
 		}
@@ -92,6 +91,17 @@ class Game {
 	}
 }
 
+function playerEquals(player, name) {
+	if (player.nickname && aliasEquals(player.nickname, name)) {
+		return true;
+	}
+	return aliasEquals(player.user.username, name);
+}
+
+function aliasEquals(nameOrAlias, name) {
+	return nameOrAlias === name || (playerAliasMap.has(nameOrAlias) && playerAliasMap.get(nameOrAlias) === name);
+}
+
 /** *****
  *
  * this is the "main" function
@@ -104,7 +114,7 @@ client.on('message', msg => {
 		const args = msg.content.slice(monitorCommand.length).trim().split(' ');
 		const gameID = args[0];
 		if(!gameDatabase.has(gameID)) {
-			gameDatabase.set(gameID, new Game(gameID, msg.mentions.users, msg.channel, msg.guild));
+			gameDatabase.set(gameID, new Game(gameID, msg.mentions.members, msg.channel, msg.guild));
 			console.log('monitoring game: ' + gameDatabase.get(gameID).toString());
 			msg.reply(`monitoring game: ${gameDatabase.get(gameID).toString()}`);
 		}
