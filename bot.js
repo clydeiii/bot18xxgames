@@ -1,7 +1,8 @@
 // load .env file for heroku
 require('dotenv').config();
 const Discord = require('discord.js');
-const client = new Discord.Client();
+const discordClient = new Discord.Client();
+const pg = require('pg');
 const fetch = require('node-fetch');
 const fs = require('fs');
 const timeUp = Date();
@@ -14,6 +15,14 @@ const gameDatabase = new Discord.Collection();
 const internalPollingInterval = 29;
 const externalPollingInterval = 179;
 const webAPI = 'https://www.18xx.games/api/game/';
+
+const pgClient = new pg.Client({
+	connectionString: process.env.DATABASE_URL,
+	ssl: {
+		rejectUnauthorized: false
+	}
+});
+pgClient.connect();
 
 const playerAliasMap = new Map();
 playerAliasMap.set('DelmarSon.ttv', 'DelmarSon');
@@ -102,12 +111,65 @@ function aliasEquals(nameOrAlias, name) {
 	return nameOrAlias === name || (playerAliasMap.has(nameOrAlias) && playerAliasMap.get(nameOrAlias) === name);
 }
 
+function initGames() {
+	pgClient.query('SELECT id, game_id, guild_id, channel_id FROM game WHERE is_active').then((res) => {
+		for (let row of res.rows) {
+			pgClient.query('SELECT user_id FROM player WHERE game_id = $1', [row.id]).then((playerRes) => {
+				initGame(row.game_id, row.guild_id, row.channel_id, playerRes.rows.map(playerRow => playerRow.user_id));
+			}).catch(err => {
+				console.error(`Failed to look up game ${row.id}: ${err.stack}`);
+			})
+		}
+	}).catch(err => {
+		console.error(`Failed to look up list of games: ${err.stack}`);
+	});
+}
+
+function initGame(gameId, guildId, channelId, playerIds) {
+	if (!gameDatabase.has(gameId)) {
+		const guild = discordClient.guilds.cache.get(guildId);
+		const channel = guild.channels.cache.get(channelId);
+		const playersPromise = guild.members.fetch({user: playerIds});
+		playersPromise.then((players) => {
+			gameDatabase.set(gameId, new Game(gameId, players, channel, guild));
+			console.log('loaded game: ' + gameDatabase.get(gameId).toString());
+		});
+	} else {
+		console.warn(`tried to load game ${gameId} but it already exists`);
+	}
+}
+
+function insertGame(game) {
+	pgClient.query('BEGIN').then(res => {
+		return pgClient.query('INSERT INTO game(game_id, guild_id, channel_id) VALUES ($1, $2, $3) RETURNING id', [game.id, game.guild.id, game.channel.id])
+			.then((res) => {
+			const id = res.rows[0].id;
+			const insertPromises = [];
+			for (let player of game.players) {
+				insertPromises.push(pgClient.query('INSERT INTO player(game_id, user_id) VALUES ($1, $2)', [id, player.id]));
+			}
+			return Promise.all(insertPromises).then((res) => pgClient.query('COMMIT'));
+		})
+	}).catch((err) => {
+		console.error(err.stack);
+		pgClient.query('ROLLBACK');
+	});
+}
+
+function deleteGame(gameId) {
+	pgClient.query('DELETE FROM game WHERE game_id = $1', [gameId]);
+}
+
+function updateGameFinished(gameId) {
+	pgClient.query('UPDATE game SET is_active = false WHERE game_id = $1', [gameId]);
+}
+
 /** *****
  *
  * this is the "main" function
  *
  ****/
-client.on('message', msg => {
+discordClient.on('message', msg => {
 	// console.log(msg.content);
 	if (msg.content.startsWith(monitorCommand)) {
 		fs.appendFileSync(commandLogFileName, `${msg.channel} ${msg.content}\n`);
@@ -115,6 +177,7 @@ client.on('message', msg => {
 		const gameID = args[0];
 		if(!gameDatabase.has(gameID)) {
 			gameDatabase.set(gameID, new Game(gameID, msg.mentions.members, msg.channel, msg.guild));
+			insertGame(gameDatabase.get(gameID));
 			console.log('monitoring game: ' + gameDatabase.get(gameID).toString());
 			msg.reply(`monitoring game: ${gameDatabase.get(gameID).toString()}`);
 		}
@@ -129,6 +192,7 @@ client.on('message', msg => {
 		const gameID = args[0];
 		console.log('forgetting game ' + gameID);
 		gameDatabase.delete(gameID);
+		deleteGame(gameID);
 		msg.reply(`game ${gameID} forgotten`);
 	}
 	else if (msg.content === listCommand) {
@@ -145,8 +209,9 @@ client.on('message', msg => {
 });
 
 // log that bot is up and online
-client.once('ready', () => {
-	console.log(`Logged in as ${client.user.tag} at uptime: ${timeUp}`);
+discordClient.once('ready', () => {
+	console.log(`Logged in as ${discordClient.user.tag} at uptime: ${timeUp}`);
+	initGames();
 });
 
 /*
@@ -161,6 +226,7 @@ const getCurrentPlayerFromWeb = async gameID => {
 		if(gameStatus === 'finished') {
 			console.log(`game ${gameID} has finished`);
 			gameDatabase.delete(gameID);
+			updateGameFinished(gameID);
 		}
 		json.players.forEach(player => {
 			if(player['id'] === parseInt(json.acting)) {
@@ -176,7 +242,7 @@ const getCurrentPlayerFromWeb = async gameID => {
 };
 
 // inject bot token in real time from .env variable
-client.login(process.env.DISCORD_TOKEN);
+discordClient.login(process.env.DISCORD_TOKEN);
 
 // start a background process that runs every 10 seconds and alerts any players whose turn it is
 setInterval (function() {
