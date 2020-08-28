@@ -10,6 +10,7 @@ const commandLogFileName = './commands.log';
 const monitorCommand = '!monitor_game';
 const listCommand = '!list_games';
 const forgetCommand = '!forget_game';
+const usernameCommand = '!username';
 const helpCommand = '!help';
 const gameDatabase = new Discord.Collection();
 const internalPollingInterval = 29;
@@ -24,10 +25,7 @@ const pgClient = new pg.Client({
 });
 pgClient.connect();
 
-const playerAliasMap = new Map();
-playerAliasMap.set('DelmarSon.ttv', 'DelmarSon');
-playerAliasMap.set('happypandoo', 'Happypandoo');
-playerAliasMap.set('nannermonkey', 'bellynice');
+const playerUsernameMap = new Map();
 
 class Game {
 	constructor(id, players, channel, guild) {
@@ -101,14 +99,13 @@ class Game {
 }
 
 function playerEquals(player, name) {
-	if (player.nickname && aliasEquals(player.nickname, name)) {
+	if (playerUsernameMap.has(player.id) && playerUsernameMap.get(player.id) === name) {
 		return true;
 	}
-	return aliasEquals(player.user.username, name);
-}
-
-function aliasEquals(nameOrAlias, name) {
-	return nameOrAlias === name || (playerAliasMap.has(nameOrAlias) && playerAliasMap.get(nameOrAlias) === name);
+	if (player.nickname && player.nickname === name) {
+		return true;
+	}
+	return player.user.username === name;
 }
 
 function initGames() {
@@ -164,6 +161,11 @@ function updateGameFinished(gameId) {
 	pgClient.query('UPDATE game SET is_active = false WHERE game_id = $1', [gameId]);
 }
 
+function insertOrUpdateUsername(discordId, username) {
+	pgClient.query('INSERT INTO username_map (discord_user_id, web_username) VALUES ($1, $2) '
+		+ 'ON CONFLICT (discord_user_id) DO UPDATE SET web_username = $2', [discordId, username])
+}
+
 /** *****
  *
  * this is the "main" function
@@ -200,8 +202,14 @@ discordClient.on('message', msg => {
 			msg.reply(`${gameID} : ${gameDatabase.get(gameID).toString()}`);
 		}
 	}
+	else if (msg.content.startsWith(usernameCommand)) {
+		const username = msg.content.slice(usernameCommand.length).trim();
+		playerUsernameMap.set(msg.author.id, username);
+		insertOrUpdateUsername(msg.author.id, username);
+		msg.reply('recorded your 18xx.games username as ${username}');
+	}
 	else if(msg.content === helpCommand) {
-		msg.reply(`commands supported: \n${monitorCommand} [gameID] players\n${forgetCommand} [gameID]\n${listCommand}\n${helpCommand}`);
+		msg.reply(`commands supported: \n${monitorCommand} [gameID] players\n${forgetCommand} [gameID]\n${listCommand}\n${usernameCommand} [username]\n${helpCommand}`);
 	}
 	else if (msg.content === '!wwjcld') {
 		msg.reply('clearclaw would dump B&O on you right now');
