@@ -161,6 +161,13 @@ function updateGameFinished(gameId) {
 	pgClient.query('UPDATE game SET is_active = false WHERE game_id = $1', [gameId]);
 }
 
+async function initUsernameMap() {
+	const res = await pgClient.query('SELECT discord_user_id, web_username FROM username_map');
+	for (const row of res) {
+		playerUsernameMap.set(row.discord_user_id, row.web_username);
+	}
+}
+
 function insertOrUpdateUsername(discordId, username) {
 	pgClient.query('INSERT INTO username_map (discord_user_id, web_username) VALUES ($1, $2) '
 		+ 'ON CONFLICT (discord_user_id) DO UPDATE SET web_username = $2', [discordId, username])
@@ -220,6 +227,7 @@ discordClient.on('message', msg => {
 discordClient.once('ready', () => {
 	console.log(`Logged in as ${discordClient.user.tag} at uptime: ${timeUp}`);
 	initGames();
+	initUsernameMap();
 });
 
 /*
