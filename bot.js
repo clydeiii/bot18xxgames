@@ -163,7 +163,7 @@ function updateGameFinished(gameId) {
 
 async function initUsernameMap() {
 	const res = await pgClient.query('SELECT discord_user_id, web_username FROM username_map');
-	for (const row of res) {
+	for (const row of res.rows) {
 		playerUsernameMap.set(row.discord_user_id, row.web_username);
 	}
 }
