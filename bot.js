@@ -206,7 +206,7 @@ discordClient.on('message', msg => {
 		const username = msg.content.slice(usernameCommand.length).trim();
 		playerUsernameMap.set(msg.author.id, username);
 		insertOrUpdateUsername(msg.author.id, username);
-		msg.reply('recorded your 18xx.games username as ${username}');
+		msg.reply(`recorded your 18xx.games username as ${username}`);
 	}
 	else if(msg.content === helpCommand) {
 		msg.reply(`commands supported: \n${monitorCommand} [gameID] players\n${forgetCommand} [gameID]\n${listCommand}\n${usernameCommand} [username]\n${helpCommand}`);
