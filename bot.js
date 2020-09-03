@@ -216,7 +216,7 @@ discordClient.on('message', msg => {
 		msg.reply(`recorded your 18xx.games username as ${username}`);
 	}
 	else if(msg.content === helpCommand) {
-		msg.reply(`commands supported: \n${monitorCommand} [gameID] players\n${forgetCommand} [gameID]\n${listCommand}\n${usernameCommand} [username]\n${helpCommand}`);
+		msg.reply(`commands supported: \n${monitorCommand} gameID @player1 @player2 @player3 @etc\n${forgetCommand} gameID\n${listCommand}\n${helpCommand}`);
 	}
 	else if (msg.content === '!wwjcld') {
 		msg.reply('clearclaw would dump B&O on you right now');
