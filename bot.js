@@ -15,7 +15,7 @@ const helpCommand = '!help';
 const gameDatabase = new Discord.Collection();
 const internalPollingInterval = 29;
 const externalPollingInterval = 179;
-const webAPI = 'https://www.18xx.games/api/game/';
+const webAPI = 'https://18xx.games/api/game/';
 
 const pgClient = new pg.Client({
 	connectionString: process.env.DATABASE_URL,
