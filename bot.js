@@ -133,6 +133,12 @@ client.once('ready', () => {
 	console.log(`Logged in as ${client.user.tag} at uptime: ${timeUp}`);
 });
 
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
 /*
  * async function getCurrentPlayersFromWeb queries 18xx.games website via web API, given an game ID, then uses that update our internal database
  */
@@ -153,6 +159,7 @@ const getCurrentPlayerFromWeb = async gameID => {
 				game.advancePlayer(player['name']);
 			}
 		});
+                await sleep(1000);
 	}
 	catch (error) {
 		console.log(error);
