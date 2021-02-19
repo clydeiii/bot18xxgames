@@ -2,7 +2,7 @@
   "name": "18xxgamesbot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
@@ -13,6 +13,7 @@
     "discord.js": "^12.2.0",
     "dotenv": "^8.2.0",
     "eslint": "^7.6.0",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.1",
+    "pg": "^8.3.2"
   }
 }
