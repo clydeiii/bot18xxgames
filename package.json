@@ -4,7 +4,9 @@
   "description": "",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "prepare": "npm run snyk-protect",
+    "snyk-protect": "snyk-protect"
   },
   "keywords": [],
   "author": "clydeiii",
@@ -14,6 +16,8 @@
     "dotenv": "^8.2.0",
     "eslint": "^7.6.0",
     "node-fetch": "^2.6.1",
-    "pg": "^8.3.2"
-  }
+    "pg": "^8.3.2",
+    "@snyk/protect": "latest"
+  },
+  "snyk": true
 }
