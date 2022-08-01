@@ -10,10 +10,10 @@
   "author": "clydeiii",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.2.0",
+    "discord.js": "^14.0.0",
     "dotenv": "^8.2.0",
     "eslint": "^7.6.0",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^3.2.10",
     "pg": "^8.3.2"
   }
 }
